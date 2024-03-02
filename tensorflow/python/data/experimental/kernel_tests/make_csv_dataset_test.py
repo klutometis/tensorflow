@@ -61,18 +61,23 @@ class MakeCsvDatasetTest(test_base.DatasetTestBase, parameterized.TestCase):
       filenames.append(fn)
     return filenames
 
-  def _next_expected_batch(self, expected_output, expected_keys, batch_size,
+def _next_expected_batch(self, expected_output, expected_keys, batch_size,
                            num_epochs):
-    features = {k: [] for k in expected_keys}
-    for _ in range(num_epochs):
-      for values in expected_output:
-        for n, key in enumerate(expected_keys):
-          features[key].append(values[n])
-        if len(features[expected_keys[0]]) == batch_size:
-          yield features
-          features = {k: [] for k in expected_keys}
-    if features[expected_keys[0]]:  # Leftover from the last batch
-      yield features
+  features = {k: [] for k in expected_keys}
+  for _ in range(num_epochs):
+    for values in expected_output:
+      for n, key in enumerate(expected_keys):
+        features[key].append(values[n])
+      if len(features[expected_keys[0]]) == batch_size:
+        yield features
+        features = {k: [] for k in expected_keys}
+  # Check for incomplete batch and pad if necessary
+  if features[expected_keys[0]]:
+    padding_size = batch_size - len(features[expected_keys[0]])
+    for key in expected_keys:
+      # Assuming default padding value is 0 for all types
+      features[key].extend([0] * padding_size)
+    yield features
 
   def _verify_output(
       self,
